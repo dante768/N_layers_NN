@@ -28,6 +28,9 @@
 		tmp(y(i)) = 1;
 		answer = [answer; tmp];
 	end
+	y = answer;
+	clear answer;
+	clear tmp;
 	
 	%% Create and initialize the weight matrices
 	nn_params = randInitializeWeights(layers_size, epsilon_init);

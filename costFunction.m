@@ -54,7 +54,8 @@ function [J grad] = costFunction( nn_params, ...
 	end
 	
 	for i = 1:(layer_nb-1)
-		before_layer_activities(i + 1).mat = [ones(size(layer_activities(i).mat, 1), 1), layer_activities(i).mat] * (Thetas(i).mat)';
+		layer_activities(i).mat = [ones(size(layer_activities(i).mat, 1), 1), layer_activities(i).mat];
+		before_layer_activities(i + 1).mat = layer_activities(i).mat * (Thetas(i).mat)';
 		layer_activities(i + 1).mat = logistic(before_layer_activities(i + 1).mat);
 	end
 	
@@ -63,13 +64,12 @@ function [J grad] = costFunction( nn_params, ...
 		J = J + ((y(i, :) * log(layer_activities(end).mat(i, :))') + ((1 - y(i, :)) * log(1 - layer_activities(end).mat(i, :))'));
 	end
 	J = -(J/m);
-	% fprintf("Unregularized cost function = %f\n", J);
 	
 	% - Regularized cost function
 	for i = 1:size(Thetas, 2)
 		tmp_theta = Thetas(i).mat;
 		for j = 2:size(tmp_theta, 2)
-			regularization_term = regularization_term + (tmp_theta(:, i)' * tmp_theta(:, i));
+			regularization_term = regularization_term + (tmp_theta(:, j)' * tmp_theta(:, j));
 		end
 	end
 	J = J + ((lambda/(2*m)) * regularization_term);
@@ -90,13 +90,15 @@ function [J grad] = costFunction( nn_params, ...
 	
 	deltas(end).mat = layer_activities(end).mat - y;
 	
-	for i = (size(deltas, 2) - 1):-1:1
-		deltas(i).mat = (Thetas(i).mat(:,2:end)' * deltas(i + 1).mat')' .* dlogistic(before_layer_activities(i).mat);
-		% Unregularized gradients
-		Thetas_grad(i).mat = (layer_activities(i).mat' * deltas(i + 1).mat)/m;
+	for i = (size(deltas, 2)-1):-1:1
+		for j = 1:m
+			% Unregularized gradients
+			deltas(i).mat(j,:) = Thetas(i).mat(:,2:end)' * deltas(i + 1).mat(j,:)' .* dlogistic(before_layer_activities(i).mat(j,:))';
+			Thetas_grad(i).mat = Thetas_grad(i).mat + ((layer_activities(i).mat(j,:)' * deltas(i + 1).mat(j,:)))';
+		end
+		Thetas_grad(i).mat = Thetas_grad(i).mat/m;
 		% Regularized gradients
-		Thetas_grad(i).mat = (Thetas_grad(i).mat + ((lambda/m) * Thetas(i).mat(:,2:end)'))';
-		Thetas_grad(i).mat = [Thetas_grad(i).mat Thetas(i).mat(:,1)];
+		Thetas_grad(i).mat = Thetas_grad(i).mat + ((lambda/m) * [zeros(size(Thetas(i).mat, 1), 1), Thetas(i).mat(:,2:end)]);
 		grad = [Thetas_grad(i).mat(:) ; grad];
-	end
+	end	
 end
