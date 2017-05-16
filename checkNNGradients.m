@@ -37,19 +37,11 @@ function checkNNGradients(lambda)
 	% Unroll parameters
 	nn_params = [Theta1(:) ; Theta2(:)];
 	
-	% Compute numerical gradient
-	numgrad = zeros(size(nn_params));
-	perturb = zeros(size(nn_params));
-	e = 1e-4;
-	for p = 1:numel(nn_params)
-		% Set perturbation vector
-		perturb(p) = e;
-		[loss1 dummy] = costFunction(nn_params - perturb, layers_size, X, y, lambda);
-		[loss2 dummy] = costFunction(nn_params + perturb, layers_size, X, y, lambda);
-		% Compute Numerical Gradient
-		numgrad(p) = (loss2 - loss1) / (2*e);
-		perturb(p) = 0;
-	end
+	% Short hand for cost function
+	costFunc = @(p) costFunction(p, layers_size, X, y, lambda);
+	
+	% Compute the numerical gradient
+	numgrad = computeNumericalGradient(costFunc, nn_params);
 	
 	% Compute analytical gradient
 	[cost, grad] = costFunction(nn_params, layers_size, X, y, lambda);

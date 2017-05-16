@@ -1,9 +1,9 @@
 function [J grad] = costFunction( nn_params, ...
 							layers_size, ...
-							X, y, lambda)
+							X, y, weight_decay)
 	% COSTFUNCTION Implements the neural network cost function for a N layer(s)
 	% neural network which performs classification
-	%	[J grad] = COSTFUNCTION(nn_params, layers_size, X, y, lambda, momentum) 
+	%	[J grad] = COSTFUNCTION(nn_params, layers_size, X, y, weight_decay, momentum) 
 	%	computes the cost and the gradient of the neural network. 
 	%
 	%	- The parameters for the neural network are "unrolled" into the vector nn_params. 
@@ -15,8 +15,8 @@ function [J grad] = costFunction( nn_params, ...
 	%	The returned parameter grad is a "unrolled" vector of the partial derivatives 
 	%	of the neural network.
 	
-	if ~exist("lambda", "var") || isempty(lambda)
-		lambda = 0;
+	if ~exist("weight_decay", "var") || isempty(weight_decay)
+		weight_decay = 0;
 	end
 	
 	layer_nb = length(layers_size);
@@ -40,7 +40,7 @@ function [J grad] = costFunction( nn_params, ...
 	end
 	
 	% Variables to return
-	J = 0; regularization_term = 0; grad = [];
+	J = 0; regularization_term = 0;
 	% Useful variables
 	layer_activities = [];
 	before_layer_activities = [];
@@ -53,11 +53,15 @@ function [J grad] = costFunction( nn_params, ...
 		layer_activities(i).mat = zeros(m, layers_size(i));
 	end
 	
+	% The first layer corresponds to the input data
+	layer_activities(1).mat = X;
+	
 	for i = 1:(layer_nb-1)
 		layer_activities(i).mat = [ones(size(layer_activities(i).mat, 1), 1), layer_activities(i).mat];
 		before_layer_activities(i + 1).mat = layer_activities(i).mat * (Thetas(i).mat)';
 		layer_activities(i + 1).mat = logistic(before_layer_activities(i + 1).mat);
 	end
+	
 	
 	% - Unregularized cost function
 	for i = 1:m
@@ -72,7 +76,7 @@ function [J grad] = costFunction( nn_params, ...
 			regularization_term = regularization_term + (tmp_theta(:, j)' * tmp_theta(:, j));
 		end
 	end
-	J = J + ((lambda/(2*m)) * regularization_term);
+	J = J + ((weight_decay/(2*m)) * regularization_term);
 	
 	% Part 2
 	% - Backpropagation
@@ -91,14 +95,13 @@ function [J grad] = costFunction( nn_params, ...
 	deltas(end).mat = layer_activities(end).mat - y;
 	
 	for i = (size(deltas, 2)-1):-1:1
-		for j = 1:m
-			% Unregularized gradients
-			deltas(i).mat(j,:) = Thetas(i).mat(:,2:end)' * deltas(i + 1).mat(j,:)' .* dlogistic(before_layer_activities(i).mat(j,:))';
-			Thetas_grad(i).mat = Thetas_grad(i).mat + ((layer_activities(i).mat(j,:)' * deltas(i + 1).mat(j,:)))';
-		end
+		% Unregularized gradients
+		deltas(i).mat = (Thetas(i).mat(:,2:end)' * deltas(i + 1).mat' .* dlogistic(before_layer_activities(i).mat)')';
+		Thetas_grad(i).mat = (layer_activities(i).mat' * deltas(i + 1).mat)';
 		Thetas_grad(i).mat = Thetas_grad(i).mat/m;
+		
 		% Regularized gradients
-		Thetas_grad(i).mat = Thetas_grad(i).mat + ((lambda/m) * [zeros(size(Thetas(i).mat, 1), 1), Thetas(i).mat(:,2:end)]);
+		Thetas_grad(i).mat = Thetas_grad(i).mat + ((weight_decay/m) * [zeros(size(Thetas(i).mat, 1), 1), Thetas(i).mat(:,2:end)]);
 		grad = [Thetas_grad(i).mat(:) ; grad];
 	end	
 end
